@@ -100,8 +100,8 @@ def login_cpc():
     customerName.clear()  #清除用户名的字符
     customerPassword.clear()  #清除密码的字符
     customerID.send_keys('1')
-    customerName.send_keys('Admin62277')  #写入自己的账号，字符加引号
-    customerPassword.send_keys('P@ssw0rd123')    #写入自己的密码
+    customerName.send_keys('xxxx')  #写入自己的账号，字符加引号
+    customerPassword.send_keys('xxxx')    #写入自己的密码
     
     #验证码登录确认
     time.sleep(1)
