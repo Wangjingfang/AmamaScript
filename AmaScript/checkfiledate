@@ -1,0 +1,85 @@
+# -*- coding: utf-8 -*-
+"""
+File Name: checkfiledate
+
+Author: wangjingfang
+
+Date Time: 2022/5/24
+
+Description:
+
+"""
+import os, sys
+import pandas as pd
+import time
+import numpy as np
+import datetime
+
+# 检查文件内的日期最小值
+def readfile():
+    path = r"D:\Amazon小组\广告报表0627"
+    file_xlsx_list = []
+    file_csv_list = []
+
+    filenot90daylist = []
+
+
+    today = datetime.datetime.today()
+    # 近30天前日期,大于30天
+    last30day = today - datetime.timedelta(days=35)
+
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            if os.path.splitext(file)[-1] == ".xlsx":
+                file_xlsx_list.append(os.path.join(root,file))
+                # print((os.path.join(root,file)))
+            else:
+                file_csv_list.append(os.path.join(root,file))
+                # print((os.path.join(root, file)))
+
+    print("加载完成报告路径")
+    # return file_xlsx_list, file_csv_list
+
+    for fxlsx in file_xlsx_list:
+        # print(fxlsx)
+        df_xlsx = pd.read_excel(fxlsx)
+        # 判断该列是否全部为空
+        if df_xlsx['Date'].isnull().all():
+            continue
+
+        if df_xlsx['Date'].min() <= last30day:
+            filenot90daylist.append(fxlsx)
+            print(fxlsx)
+
+    for fcsv in file_csv_list:
+        # print(fcsv)
+        df_csv = pd.read_csv(fcsv)
+        # 跳过为空的
+        if df_csv['Date'].isnull().all():
+            # print(fcsv)
+            continue
+        # 将字符串转为时间 的 格式
+        # datestring = df4['Date'][0]
+        # datestring
+        # Out[55]: 'Mar 19, 2022'
+        # dateformat = '%b %d, %Y'
+        # datetime.datetime.strptime(datestring,dateformat)
+        # Out[58]: datetime.datetime(2022, 3, 19, 0, 0)
+        # 将列变为datetime格式
+        # df4['Date'].apply(lambda x: datetime.datetime.strptime(x, dateformat))
+        dateformat = '%b %d, %Y'
+        df_csv['Date'] = df_csv['Date'].apply(lambda x: datetime.datetime.strptime(x, dateformat))
+
+        if df_csv['Date'].min() <= last30day:
+            filenot90daylist.append(fcsv)
+            print(fcsv)
+
+    # return filenot90daylist
+    with open("filenot90daylist.txt", "w") as f:
+        for i in filenot90daylist:
+            f.write(i + '\n')
+
+
+if __name__ == '__main__':
+
+    readfile()
