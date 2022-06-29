@@ -1,0 +1,802 @@
+# -*- coding: utf-8 -*-
+"""
+File Name: creatAdreports
+
+Author: wangjingfang
+
+Date Time: 2022/5/13
+
+Description:
+
+"""
+
+
+import os
+import shutil
+import pandas as pd
+import numpy as np
+import csv
+import time
+"""
+分发转移文件
+# 分配文件， 将 SP,SB,SD文件归类
+raw_file = r"D:\Amazon小组\001-JP-20220512"
+
+sppath = r"D:\Adreport\SP"
+sbvpath = r"D:\Adreport\SBV"
+sbpath = r"D:\Adreport\SB"
+sdpath = r"D:\Adreport\SD"
+"""
+
+
+
+
+
+
+
+# SP内各种报告合成报告 （SP.xlsx, SPIS.csv, SPPL.xlsx, SPPP.xlsx, SPTG.xlsx）
+
+def file_name_SP(path):
+    try:
+        L = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if len(os.path.split(file)[1]) == 14:
+                    if "SP" in file:
+                        L.append(os.path.join(root,file))
+                        print((os.path.join(root,file)))
+        return L
+
+    except Exception as e:
+        print("获取各文件路径失败", e)
+
+def file_name_SB(path):
+    try:
+        L = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if len(os.path.split(file)[1]) == 14:
+                    if "SB" in file:
+                        L.append(os.path.join(root,file))
+                        print((os.path.join(root,file)))
+        return L
+
+    except Exception as e:
+        print("获取各文件路径失败", e)
+
+def file_name_SBV(path):
+    try:
+        L = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if "SBV" in file:
+                    L.append(os.path.join(root,file))
+                    print((os.path.join(root,file)))
+        return L
+
+    except Exception as e:
+        print("获取各文件路径失败", e)
+
+def file_name_SPTG(path):
+    try:
+        L = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if "SPTG" in file:
+                    L.append(os.path.join(root,file))
+                    print((os.path.join(root,file)))
+        return L
+
+    except Exception as e:
+        print("获取各文件路径失败", e)
+
+def file_name_SPIS(path):
+    try:
+        L = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if "SPIS" in file:
+                    L.append(os.path.join(root,file))
+                    print((os.path.join(root,file)))
+        return L
+
+    except Exception as e:
+        print("获取各文件路径失败", e)
+
+def file_name_SPPL(path):
+    try:
+        L = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if "SPPL" in file:
+                    L.append(os.path.join(root,file))
+                    print((os.path.join(root,file)))
+        return L
+
+    except Exception as e:
+        print("获取各文件路径失败", e)
+
+def file_name_SPPP(path):
+    try:
+        L = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if "SPPP" in file:
+                    L.append(os.path.join(root,file))
+                    print((os.path.join(root,file)))
+        return L
+
+    except Exception as e:
+        print("获取各文件路径失败", e)
+def file_name_SBKP(path):
+    try:
+        L = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if "SBKP" in file:
+                    L.append(os.path.join(root,file))
+                    print((os.path.join(root,file)))
+        return L
+
+    except Exception as e:
+        print("获取各文件路径失败", e)
+
+def file_name_SBIS(path):
+    try:
+        L = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if "SBIS" in file:
+                    L.append(os.path.join(root,file))
+                    print((os.path.join(root,file)))
+        return L
+
+    except Exception as e:
+        print("获取各文件路径失败", e)
+
+def file_name_SDTG(path):
+    try:
+        L = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if "SDTG" in file:
+                    L.append(os.path.join(root,file))
+                    print((os.path.join(root,file)))
+        return L
+
+    except Exception as e:
+        print("获取各文件路径失败", e)
+
+
+def read_data_SP():
+    try:
+        L = file_name_SP(path)
+        print("文件路径已加载到列表")
+        df_transform = pd.read_excel(transform_path,sheet_name="Sheet1",engine="openpyxl")
+        df_group = pd.read_excel(group_path, sheet_name="Sheet1",engine="openpyxl")
+        upload_file = pd.read_excel(model_path,sheet_name="SP",engine="openpyxl")
+
+        m = 0
+        n = 0
+        for l in L:
+            df = pd.read_excel(l)
+            filename = l.split("\\")[-1]
+            df["Country"] = filename[4:6]
+            df["Station"] = filename[:6]
+            df.columns = list(upload_file.columns)
+            print(filename[:6], df.shape)
+            upload_file = pd.concat([upload_file, df], axis=0)
+
+            n += 1
+            m += df.shape[0]
+        print(m, n)
+        print(upload_file.shape)
+
+        # 加入组和货币换算
+        upload_file = pd.merge(upload_file, df_group, on="Station", how="left")
+        upload_file = pd.merge(upload_file, df_transform, on="Country", how="left")
+
+        print(upload_file.shape)
+
+        upload_file["Spend$"] = upload_file["Spend"] * upload_file["Price"]
+        upload_file["Sales$"] = upload_file["Sales"] * upload_file["Price"]
+
+        upload_file["Sales"] = upload_file["Sales"].replace(0, np.nan)
+        upload_file["Orders"] = upload_file["Orders"].replace(0, np.nan)
+
+        final_df = upload_file.drop(columns="Price")
+
+        # 存放生成文件路径
+        todaydir = time.strftime("%Y-%m-%d", time.localtime())
+        uploadpath = r"D:\Adreport\uploadfile\{}-SPupload.xlsx".format(todaydir)
+        final_df.to_excel(excel_writer= uploadpath, index= None)
+
+    except Exception as e:
+        print("读取数据失败", e)
+    else:
+        print("SP文件已创建，可上传")
+
+def read_data_SB():
+    try:
+        L = file_name_SB(path)
+        print("文件路径已加载到列表")
+        df_transform = pd.read_excel(transform_path,sheet_name="Sheet1",engine="openpyxl")
+        df_group = pd.read_excel(group_path, sheet_name="Sheet1",engine="openpyxl")
+        upload_file = pd.read_excel(model_path,sheet_name="SB",engine="openpyxl")
+
+        m = 0
+        n = 0
+        for l in L:
+            df = pd.read_excel(l)
+            filename = l.split("\\")[-1]
+            df["Country"] = filename[4:6]
+            df["Station"] = filename[:6]
+            df.columns = list(upload_file.columns)
+            print(filename[:6], df.shape)
+            upload_file = pd.concat([upload_file, df], axis=0)
+
+            n += 1
+            m += df.shape[0]
+        print(m, n)
+        print(upload_file.shape)
+
+        # 加入组和货币换算
+        upload_file = pd.merge(upload_file, df_group, on="Station", how="left")
+        upload_file = pd.merge(upload_file, df_transform, on="Country", how="left")
+
+        print(upload_file.shape)
+
+        upload_file["Spend$"] = upload_file["Spend"] * upload_file["Price"]
+        upload_file["14 Day Total Sales$"] = upload_file["14 Day Total Sales"] * upload_file["Price"]
+
+        upload_file["14 Day Total Sales"] = upload_file["14 Day Total Sales"].replace(0, np.nan)
+        upload_file["14 Day Total Orders (#)"] = upload_file["14 Day Total Orders (#)"].replace(0, np.nan)
+
+        final_df = upload_file.drop(columns="Price")
+
+        # 存放生成文件路径
+        todaydir = time.strftime("%Y-%m-%d", time.localtime())
+        uploadpath = r"D:\Adreport\uploadfile\{}-SBupload.xlsx".format(todaydir)
+        final_df.to_excel(excel_writer= uploadpath, index= None)
+
+    except Exception as e:
+        print("读取数据失败", e)
+    else:
+        print("SB文件已创建，可上传")
+
+# --------------------SBV------------------------
+def read_data_SBV():
+    try:
+        L = file_name_SBV(path)
+        print("文件路径已加载到列表")
+        df_transform = pd.read_excel(transform_path,sheet_name="Sheet1",engine="openpyxl")
+        df_group = pd.read_excel(group_path, sheet_name="Sheet1",engine="openpyxl")
+        upload_file = pd.read_excel(model_path,sheet_name="SBV",engine="openpyxl")
+
+        m = 0
+        n = 0
+        for l in L:
+            df = pd.read_excel(l)
+            filename = l.split("\\")[-1]
+            df["Country"] = filename[4:6]
+            df["Station"] = filename[:6]
+            df.columns = list(upload_file.columns)
+            print(filename[:6], df.shape)
+            upload_file = pd.concat([upload_file, df], axis=0)
+
+            n += 1
+            m += df.shape[0]
+        print(m, n)
+        print(upload_file.shape)
+
+        # 加入组和货币换算
+        upload_file = pd.merge(upload_file, df_group, on="Station", how="left")
+        upload_file = pd.merge(upload_file, df_transform, on="Country", how="left")
+
+        print(upload_file.shape)
+
+        upload_file["Spend$"] = upload_file["Spend"] * upload_file["Price"]
+        upload_file["14 Day Total Sales$"] = upload_file["14 Day Total Sales"] * upload_file["Price"]
+
+        upload_file["14 Day Total Sales"] = upload_file["14 Day Total Sales"].replace(0, np.nan)
+        upload_file["14 Day Total Orders (#)"] = upload_file["14 Day Total Orders (#)"].replace(0, np.nan)
+
+        final_df = upload_file.drop(columns="Price")
+
+        # 存放生成文件路径
+        todaydir = time.strftime("%Y-%m-%d", time.localtime())
+        uploadpath = r"D:\Adreport\uploadfile\{}-SBVupload.xlsx".format(todaydir)
+        final_df.to_excel(excel_writer= uploadpath, index= None)
+
+    except Exception as e:
+        print("读取数据失败", e)
+    else:
+        print("SBV文件已创建，可上传")
+
+# ---------------SPTG-------------------
+def read_data_SPTG():
+    try:
+        L = file_name_SPTG(path)
+        print("文件路径已加载到列表")
+        df_transform = pd.read_excel(transform_path,sheet_name="Sheet1",engine="openpyxl")
+        df_group = pd.read_excel(group_path, sheet_name="Sheet1",engine="openpyxl")
+        upload_file = pd.read_excel(model_path,sheet_name="SPTG",engine="openpyxl")
+
+        m = 0
+        n = 0
+        for l in L:
+            df = pd.read_excel(l)
+            filename = l.split("\\")[-1]
+            df["Country"] = filename[4:6]
+            df["Station"] = filename[:6]
+            df.columns = list(upload_file.columns)
+            print(filename[:6], df.shape)
+            upload_file = pd.concat([upload_file, df], axis=0)
+
+            n += 1
+            m += df.shape[0]
+        print(m, n)
+        print(upload_file.shape)
+
+        # 加入组和货币换算
+        upload_file = pd.merge(upload_file, df_group, on="Station", how="left")
+        upload_file = pd.merge(upload_file, df_transform, on="Country", how="left")
+
+        print(upload_file.shape)
+
+        upload_file["Spend$"] = upload_file["Spend"] * upload_file["Price"]
+        upload_file["Sales$"] = upload_file["Sales"] * upload_file["Price"]
+
+        upload_file["Sales"] = upload_file["Sales"].replace(0, np.nan)
+        upload_file["Orders"] = upload_file["Orders"].replace(0, np.nan)
+
+        final_df = upload_file.drop(columns="Price")
+
+        print(final_df.shape)
+        # 存放生成文件路径
+        todaydir = time.strftime("%Y-%m-%d", time.localtime())
+        uploadpath = r"D:\Adreport\uploadfile\{}-SPTGupload.xlsx".format(todaydir)
+        final_df.to_excel(excel_writer= uploadpath, index= None)
+
+    except Exception as e:
+        print("读取数据失败", e)
+    else:
+        print("SPTG文件已创建，可上传")
+
+# -----------------SPIS-------------------
+def read_data_SPIS():
+    try:
+        L = file_name_SPIS(path)
+        print("文件路径已加载到列表")
+        df_transform = pd.read_excel(transform_path, sheet_name="Sheet1", engine="openpyxl")
+        df_group = pd.read_excel(group_path, sheet_name="Sheet1", engine="openpyxl")
+        upload_file = pd.read_excel(model_path, sheet_name="SPIS", engine="openpyxl")
+
+        m = 0
+        n = 0
+        for l in L:
+
+            # df = pd.read_csv(l)
+            df = pd.read_csv(l)
+            filename = l.split("\\")[-1]
+            print(filename)
+            df["Country"] = filename[4:6]
+            df["Station"] = filename[:6]
+            df.columns = list(upload_file.columns)
+            print(filename[:6], df.shape)
+            upload_file = pd.concat([upload_file, df], axis=0)
+
+            n += 1
+            m += df.shape[0]
+        print(m, n)
+        print(upload_file.shape)
+        # print(1)
+        # 加入组和货币换算
+        upload_file = pd.merge(upload_file, df_group, on="Station", how="left")
+        upload_file = pd.merge(upload_file, df_transform, on="Country", how="left")
+
+        # for i in ['Orders']:
+        #     if upload_file[i].dtype == "object":
+        #         print(i)
+        #         upload_file[i] = upload_file[i].apply(lambda x:"".join(x.split(','))).astype('int64')
+
+        # for i in ["Search Term Impression Rank", 'Clicks', 'Impressions','Orders']:
+        #     if upload_file[i].dtype == "object":
+        #         upload_file[i] = upload_file[i].astype('int64')
+
+        for i in ['Search Term Impression Share', '7 Day Conversion Rate']:
+            if upload_file[i].dtype == "object":
+
+                upload_file[i] = upload_file[i].apply(lambda x: "".join(x.split(',')))
+                upload_file[i] = upload_file[i].apply(lambda  x: "".join(x.split('%'))).astype('float64') / 100
+
+        # print(2)
+        for i in ['Can$','€','$','£',',','¥','JP¥','￥']:
+            upload_file["Sales"] = upload_file["Sales"].apply(lambda x: "".join(x.split(i)))
+            # upload_file["Cost Per Click (CPC)"] = upload_file["Cost Per Click (CPC)"].apply(lambda x: "".join(x.split(i)))
+            upload_file["Spend"] = upload_file["Spend"].apply(lambda x: "".join(x.split(i)))
+
+        for i in ["Spend", "Sales",]:
+            upload_file[i] = upload_file[i].astype('float64')
+
+        print(upload_file.shape)
+
+        upload_file["Spend$"] = upload_file["Spend"] * upload_file["Price"]
+        upload_file["Sales$"] = upload_file["Sales"] * upload_file["Price"]
+
+        upload_file["Sales"] = upload_file["Sales"].replace(0, np.nan)
+        upload_file["Orders"] = upload_file["Orders"].replace(0, np.nan)
+
+        final_df = upload_file.drop(columns="Price")
+
+        print(final_df.shape)
+        # 存放生成文件路径
+        todaydir = time.strftime("%Y-%m-%d", time.localtime())
+        uploadpath = r"D:\Adreport\uploadfile\{}-SPISupload.xlsx".format(todaydir)
+        final_df.to_excel(excel_writer=uploadpath, index=None)
+
+    except Exception as e:
+        print("读取数据失败", e)
+    else:
+        print("SPIS文件已创建，可上传")
+
+# -------------------------SPPL-----------------------------
+def read_data_SPPL():
+    try:
+        L = file_name_SPPL(path)
+        print("文件路径已加载到列表")
+        df_transform = pd.read_excel(transform_path,sheet_name="Sheet1",engine="openpyxl")
+        df_group = pd.read_excel(group_path, sheet_name="Sheet1",engine="openpyxl")
+        upload_file = pd.read_excel(model_path,sheet_name="SPPL",engine="openpyxl")
+
+        m = 0
+        n = 0
+        for l in L:
+            df = pd.read_excel(l)
+            filename = l.split("\\")[-1]
+            df["Country"] = filename[4:6]
+            df["Station"] = filename[:6]
+            df.columns = list(upload_file.columns)
+            print(filename[:6], df.shape)
+            upload_file = pd.concat([upload_file, df], axis=0)
+
+            n += 1
+            m += df.shape[0]
+        print(m, n)
+        print(upload_file.shape)
+
+        # 加入组和货币换算
+        upload_file = pd.merge(upload_file, df_group, on="Station", how="left")
+        upload_file = pd.merge(upload_file, df_transform, on="Country", how="left")
+
+        print(upload_file.shape)
+
+        upload_file["Spend$"] = upload_file["Spend"] * upload_file["Price"]
+        upload_file["Sales$"] = upload_file["Sales"] * upload_file["Price"]
+
+        upload_file["Sales"] = upload_file["Sales"].replace(0, np.nan)
+        upload_file["Orders"] = upload_file["Orders"].replace(0, np.nan)
+
+        final_df = upload_file.drop(columns="Price")
+
+        print(final_df.shape)
+        # 存放生成文件路径
+        todaydir = time.strftime("%Y-%m-%d", time.localtime())
+        uploadpath = r"D:\Adreport\uploadfile\{}-SPPLupload.xlsx".format(todaydir)
+        final_df.to_excel(excel_writer= uploadpath, index= None)
+
+    except Exception as e:
+        print("读取数据失败", e)
+    else:
+        print("SPPL文件已创建，可上传")
+
+# ----------SBKP-----------------
+def read_data_SBKP():
+    try:
+        L = file_name_SBKP(path)
+        print("文件路径已加载到列表")
+        df_transform = pd.read_excel(transform_path,sheet_name="Sheet1",engine="openpyxl")
+        df_group = pd.read_excel(group_path, sheet_name="Sheet1",engine="openpyxl")
+        upload_file = pd.read_excel(model_path,sheet_name="SBKP",engine="openpyxl")
+
+        m = 0
+        n = 0
+        for l in L:
+            df = pd.read_excel(l)
+            filename = l.split("\\")[-1]
+            df["Country"] = filename[4:6]
+            df["Station"] = filename[:6]
+            df.columns = list(upload_file.columns)
+            print(filename[:6], df.shape)
+            upload_file = pd.concat([upload_file, df], axis=0)
+
+            n += 1
+            m += df.shape[0]
+        print(m, n)
+        print(upload_file.shape)
+
+        # 加入组和货币换算
+        upload_file = pd.merge(upload_file, df_group, on="Station", how="left")
+        upload_file = pd.merge(upload_file, df_transform, on="Country", how="left")
+
+        print(upload_file.shape)
+
+        upload_file["Spend$"] = upload_file["Spend"] * upload_file["Price"]
+        upload_file["14 Day Total Sales$"] = upload_file["14 Day Total Sales"] * upload_file["Price"]
+        upload_file["14 Day New-to-brand Sales$"] = upload_file["14 Day New-to-brand Sales"] * upload_file["Price"]
+
+        upload_file["14 Day New-to-brand Sales"] = upload_file["14 Day New-to-brand Sales"].replace(0, np.nan)
+        upload_file["14 Day Total Sales"] = upload_file["14 Day Total Sales"].replace(0, np.nan)
+        upload_file["14 Day Total Orders (#)"] = upload_file["14 Day Total Orders (#)"].replace(0, np.nan)
+        upload_file["14 Day New-to-brand Orders (#)"] = upload_file["14 Day New-to-brand Orders (#)"].replace(0, np.nan)
+
+        final_df = upload_file.drop(columns="Price")
+
+        print(final_df.shape)
+        # 存放生成文件路径
+        todaydir = time.strftime("%Y-%m-%d", time.localtime())
+        uploadpath = r"D:\Adreport\uploadfile\{}-SBKPupload.xlsx".format(todaydir)
+        final_df.to_excel(excel_writer= uploadpath, index= None)
+
+    except Exception as e:
+        print("读取数据失败", e)
+    else:
+        print("SBKP文件已创建，可上传")
+
+# ------------------SBIS ---------------------
+#
+def read_data_SBIS():
+    try:
+        L = file_name_SBIS(path)
+        print("文件路径已加载到列表")
+        df_transform = pd.read_excel(transform_path, sheet_name="Sheet1", engine="openpyxl")
+        df_group = pd.read_excel(group_path, sheet_name="Sheet1", engine="openpyxl")
+        upload_file = pd.read_excel(model_path, sheet_name="SBIS", engine="openpyxl")
+
+        m = 0
+        n = 0
+        for l in L:
+
+            # df = pd.read_csv(l)
+            df = pd.read_csv(l)
+            filename = l.split("\\")[-1]
+            print(filename)
+            df["Country"] = filename[4:6]
+            df["Station"] = filename[:6]
+            df.columns = list(upload_file.columns)
+            print(filename[:6], df.shape)
+            upload_file = pd.concat([upload_file, df], axis=0)
+
+            n += 1
+            m += df.shape[0]
+        print(m, n)
+        print(upload_file.shape)
+
+        # 加入组和货币换算
+        upload_file = pd.merge(upload_file, df_group, on="Station", how="left")
+        upload_file = pd.merge(upload_file, df_transform, on="Country", how="left")
+
+        # for i in ['Clicks', 'Impressions','Orders']:
+        #     if upload_file[i].dtype == "object":
+        #         print(i)
+        #         upload_file[i] = upload_file[i].apply(lambda x:"".join(x.split(','))).astype('int64')
+
+        for i in ["Search Term Impression Rank", 'Clicks', 'Impressions','14 Day Total Orders (#)']:
+            if upload_file[i].dtype == "object":
+                upload_file[i] = upload_file[i].astype('int64')
+
+        for i in ['Search Term Impression Share']:
+            if upload_file[i].dtype == "object":
+                # print(i)
+                upload_file[i] = upload_file[i].apply(lambda x: "".join(x.split(',')))
+                upload_file[i] = upload_file[i].apply(lambda x: "".join(x.split('%'))).astype('float64') / 100
+
+        # print(1)
+        for i in ['Can$','€','$','£',',','¥','JP¥','￥']:
+            upload_file["14 Day Total Sales"] = upload_file["14 Day Total Sales"].apply(lambda x: "".join(x.split(i)))
+            upload_file["Spend"] = upload_file["Spend"].apply(lambda x: "".join(x.split(i)))
+            # SBIS 的CPC 是 float, SPIS是str 暂时不清除也没影响
+            # upload_file["Cost Per Click (CPC)"] = upload_file["Cost Per Click (CPC)"].apply(lambda x: "".join(x.split(i)))
+
+        print("货币符号清除")
+        for i in ["Spend", "14 Day Total Sales"]:
+            upload_file[i] = upload_file[i].astype('float64')
+
+        print(upload_file.shape)
+
+        upload_file["Spend$"] = upload_file["Spend"] * upload_file["Price"]
+        upload_file["14 Day Total Sales$"] = upload_file["14 Day Total Sales"] * upload_file["Price"]
+
+        upload_file["14 Day Total Sales"] = upload_file["14 Day Total Sales"].replace(0, np.nan)
+        upload_file["14 Day Total Orders (#)"] = upload_file["14 Day Total Orders (#)"].replace(0, np.nan)
+
+        final_df = upload_file.drop(columns="Price")
+
+        print(final_df.shape)
+        # 存放生成文件路径
+        todaydir = time.strftime("%Y-%m-%d", time.localtime())
+        uploadpath = r"D:\Adreport\uploadfile\{}-SBISupload.xlsx".format(todaydir)
+        final_df.to_excel(excel_writer=uploadpath, index=None)
+
+    except Exception as e:
+        print("读取数据失败", e)
+    else:
+        print("SBIS文件已创建，可上传")
+
+# -----------------SDTG---------------------
+def read_data_SDTG():
+    try:
+        L = file_name_SDTG(path)
+        print("文件路径已加载到列表")
+        df_transform = pd.read_excel(transform_path,sheet_name="Sheet1",engine="openpyxl")
+        df_group = pd.read_excel(group_path, sheet_name="Sheet1",engine="openpyxl")
+        upload_file = pd.read_excel(model_path,sheet_name="SDTG",engine="openpyxl")
+
+        m = 0
+        n = 0
+        for l in L:
+            df = pd.read_excel(l)
+            filename = l.split("\\")[-1]
+            df["Country"] = filename[4:6]
+            df["Station"] = filename[:6]
+            df.columns = list(upload_file.columns)
+            print(filename[:6], df.shape)
+            upload_file = pd.concat([upload_file, df], axis=0)
+
+            n += 1
+            m += df.shape[0]
+        print(m, n)
+        print(upload_file.shape)
+
+        # 加入组和货币换算
+        upload_file = pd.merge(upload_file, df_group, on="Station", how="left")
+        upload_file = pd.merge(upload_file, df_transform, on="Country", how="left")
+
+        print(upload_file.shape)
+
+        upload_file["Spend$"] = upload_file["Spend"] * upload_file["Price"]
+        upload_file["14 Day Total Sales$"] = upload_file["14 Day Total Sales"] * upload_file["Price"]
+        upload_file["14 Day New-to-brand Sales$"] = upload_file["14 Day New-to-brand Sales"] * upload_file["Price"]
+
+        upload_file["14 Day Total Sales"] = upload_file["14 Day Total Sales"].replace(0, np.nan)
+        upload_file["14 Day New-to-brand Sales"] = upload_file["14 Day New-to-brand Sales"].replace(0, np.nan)
+        upload_file["14 Day Total Orders (#)"] = upload_file["14 Day Total Orders (#)"].replace(0, np.nan)
+        upload_file["14 Day New-to-brand Orders (#)"] = upload_file["14 Day New-to-brand Orders (#)"].replace(0, np.nan)
+
+
+        final_df = upload_file.drop(columns="Price")
+
+        print(final_df.shape)
+        # 存放生成文件路径
+        todaydir = time.strftime("%Y-%m-%d", time.localtime())
+        uploadpath = r"D:\Adreport\uploadfile\{}-SDTGupload.xlsx".format(todaydir)
+        final_df.to_excel(excel_writer= uploadpath, index= None)
+
+    except Exception as e:
+        print("读取数据失败", e)
+    else:
+        print("SDTG文件已创建，可上传")
+
+# ------------SPPP-------------------
+def read_data_SPPP():
+    try:
+        L = file_name_SPPP(path)
+        print("文件路径已加载到列表")
+        df_transform = pd.read_excel(transform_path,sheet_name="Sheet1",engine="openpyxl")
+        df_group = pd.read_excel(group_path, sheet_name="Sheet1",engine="openpyxl")
+        upload_file = pd.read_excel(model_path,sheet_name="SPPP",engine="openpyxl")
+
+        m = 0
+        n = 0
+        for l in L:
+            df = pd.read_excel(l)
+            filename = l.split("\\")[-1]
+            df["Country"] = filename[4:6]
+            df["Station"] = filename[:6]
+            df.columns = list(upload_file.columns)
+            print(filename[:6], df.shape)
+            upload_file = pd.concat([upload_file, df], axis=0)
+
+            n += 1
+            m += df.shape[0]
+        print(m, n)
+        print(upload_file.shape)
+
+        # 加入组和货币换算
+        upload_file = pd.merge(upload_file, df_group, on="Station", how="left")
+        upload_file = pd.merge(upload_file, df_transform, on="Country", how="left")
+
+        print(upload_file.shape)
+
+        # upload_file["Spend$"] = upload_file["Spend"] * upload_file["Price"]
+        upload_file["7 Day Other SKU Sales$"] = upload_file["7 Day Other SKU Sales"] * upload_file["Price"]
+
+        upload_file["7 Day Other SKU Sales"] = upload_file["7 Day Other SKU Sales"].replace(0, np.nan)
+        upload_file["7 Day Other SKU Orders (#)"] = upload_file["7 Day Other SKU Orders (#)"].replace(0, np.nan)
+
+        final_df = upload_file.drop(columns="Price")
+
+        # 存放生成文件路径
+        todaydir = time.strftime("%Y-%m-%d", time.localtime())
+        uploadpath = r"D:\Adreport\uploadfile\{}-SPPPupload.xlsx".format(todaydir)
+        final_df.to_excel(excel_writer= uploadpath, index= None)
+
+    except Exception as e:
+        print("读取数据失败", e)
+    else:
+        print("SPPP文件已创建，可上传")
+
+
+
+# 转移文件
+def changepath(filepath):
+
+    L = []
+    for root, dirs, files in os.walk(filepath):
+        for file in files:
+            L.append(os.path.join(root,file))
+            print((os.path.join(root, file)))
+
+        for fpath in L :
+            shutil.copy(fpath, totalpath + "\\")
+
+    return L
+# 改名函数
+def changename(totalpath):
+
+    # L = changepath()
+    # L = []
+    for root, dirs, files in os.walk(totalpath):
+        for file in files:
+            filename = os.path.splitext(file)[0]
+            # print(filename)
+            if len(filename) > 11 and len(filename) <= 14:
+                print(filename)
+                if "-SBV" in filename:
+                    filenewname = filename[:10] + ".xlsx"
+                else:
+                    filenewname = filename[:9] + ".xlsx"
+
+                print(filenewname)
+                os.rename(root + "\\" + file, root + "\\" + filenewname)
+            if len(filename) > 14:
+                if os.path.splitext(file)[-1] == '.xlsx':
+                    print(filename)
+                    filenewname = filename[:11] + ".xlsx"
+                elif os.path.splitext(file)[-1] == '.csv':
+                    print(filename)
+                    filenewname = filename[:11] + ".csv"
+                print(filenewname)
+                os.rename(root + "\\" + file, root + "\\" + filenewname)
+
+
+def main():
+    global transform_path, group_path, path, model_path, totalpath
+    # step1 转移，修改文件路径
+    filepath = r"D:\Amazon小组\广告报表0627"
+    totalpath = r"D:\Adreport\20220627"
+    # changepath(filepath)
+    # step2 修改文件名
+    # changename(totalpath)
+    # 工具文件路径
+    path = r"D:\Adreport\20220627"
+    transform_path = r"D:\programfile\transform.xlsx"
+    group_path = r"D:\programfile\group.xlsx"
+    model_path = r"D:\programfile\modelcel.xlsx"
+
+
+    # read_data_SP()
+    # read_data_SB()
+    # read_data_SBV()
+    # read_data_SPTG()
+    # read_data_SPIS()
+    # read_data_SPPL()
+    # read_data_SBKP()
+    # read_data_SBIS() # cpc 是float
+    read_data_SDTG()
+    # read_data_SPPP()
+
+
+if __name__ == '__main__':
+    main()
+
