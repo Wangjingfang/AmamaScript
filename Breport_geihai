@@ -1,0 +1,76 @@
+import numpy as np
+import pandas as pd
+import re
+
+def read_data():
+    try:
+        total_order_path = r"D:\亚马逊处理的原始表\sales_statistics_sub_asin_20230101_20230305_订单数.csv"
+        total_order_df = pd.read_csv(total_order_path)
+        total_order_df = total_order_df.drop('产品图片', axis=1)
+
+        breport_path = r"D:\亚马逊处理的原始表\breport_order.xlsx"
+        total_upload_file = pd.read_excel(breport_path,engine="openpyxl")
+
+        total_upload_path = r"D:\亚马逊处理的原始表\upload-{0}-Breport.xlsx".format("ceshi")
+        # df_week = pd.read_excel(transform_path, sheet_name='Sheet1', engine= "openpyxl")
+        # df_transform = pd.read_excel(transform_path, sheet_name='Sheet1',engine= "openpyxl")
+        # df_group = pd.read_excel(group_path, sheet_name='Sheet1',engine= "openpyxl")
+
+        regex = r'\((.*?)\)'
+
+        station_list = set(total_order_df['账号'])
+        # # current_station_list = ['Amazon-Genhigh_FR',  'Amazon-Genhigh_DE', 'Amazon-Genhigh_US',  'Amazon-Neabot_JP',
+        #                      'Amazon-Genhigh_UK', 'Amazon-Wuwo_CA', 'Amazon-Neabot_CA', 'Amazon-Wuwo_JP', 'Amazon-Neabot_FR',
+        #                      'Amazon-Neabot_US', 'Amazon-Neabot_UK', 'Amazon-genhigh_JP', 'Amazon-Genhigh_CA',
+        #                      'Amazon-Wuwo_US', 'Amazon-Neabot_DE', 'Amazon-Genhigh_IT',  'Amazon-Neabot_IT']
+
+        current_station_list = ['Amazon-Neabot_US', 'Amazon-Neabot_UK', 'Amazon-genhigh_JP']
+
+        # 分组
+        grouped_df = total_order_df.groupby('账号')
+
+        for station_name in current_station_list:
+            print(station_name)
+
+            station_upload = pd.read_excel(breport_path,engine="openpyxl")
+
+            # 基础数据部分
+            station_group_df = grouped_df.get_group(station_name)
+            station_group_base_df = station_group_df.iloc[:,:15]
+            station_group_base_df.columns = list(station_upload.columns)
+
+            # 统计 时间区域的列总长数据
+            start_column_name = '订单数(小计)'
+            start_index = station_group_df.columns.get_loc(start_column_name) + 1
+            end_index = station_group_df.columns.size
+            print(start_index)
+            print(end_index)
+            station_group_orderdate_df = station_group_df.iloc[:,start_index:end_index]
+
+            for date_col_i in range(station_group_orderdate_df.shape[1]):
+
+                # 为基础部分数据增加Order 和Date 列
+                station_group_base_df['Order'] = station_group_orderdate_df.iloc[:,date_col_i]
+                print(station_group_base_df['Order'])
+
+                # 提取括号内的字符串
+                columns_name = station_group_orderdate_df.columns[date_col_i]
+                date_name = re.findall(regex,columns_name)[0]
+                print(date_name)
+                station_group_base_df['Date'] = date_name
+
+                station_upload = pd.concat([station_upload,station_group_base_df],axis=0)
+
+
+            total_upload_file = pd.concat([total_upload_file, station_upload], axis=0)
+
+        total_upload_file.to_excel(excel_writer=total_upload_path, index=None)
+
+    except Exception as e:
+        print("读取数据失败", e)
+    else:
+        print("文件已创建，可上传")
+
+
+if __name__ == '__main__':
+    read_data()
