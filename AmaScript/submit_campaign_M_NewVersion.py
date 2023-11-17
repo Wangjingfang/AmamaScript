@@ -5,16 +5,16 @@ import os
 
 """
 20230928,Amazon将广告活动等添加了ID 信息，上传必须有原广告活动，广告组等信息的ID，所有增加关键词和ASIN分为两部分
-    1.有原广告活动和广告组，增加关键词和ASIN；
-        1.1 有原广告活动，没有广告组
+    1.1有原广告活动和广告组，增加关键词和ASIN；
+    1.2 有原广告活动，没有广告组,增加关键词和ASIN；
     2.新增广告活动和广告组；
     
     ## 
-    将下载的的含有ID的数据，合并整理成一个文件夹
+    将下载的含有ID的数据，合并整理成一个文件夹
     
 """
-super_paht = r"C:\Users\Administrator\Desktop\Super Browser"
-def raw_uploaddata(path):
+super_path = r"C:\Users\Administrator\Desktop\Super Browser"
+def raw_bulkdownload_data(path):
     try:
         L = []
         for root, dirs, files in os.walk(path):
@@ -47,20 +47,28 @@ def raw_uploaddata(path):
         upload_file['Ad Group ID'] = upload_file['Ad Group ID'].astype(str)
         upload_file['Portfolio ID'] = upload_file['Portfolio ID'].astype(str)
         upload_file['Ad ID'] = upload_file['Ad ID'].astype(str)
+        # 非ID 信息感觉可以删掉 前31列
+        columns_to_drop = ['Product','Entity','Operation','Keyword ID','Product Targeting ID','Campaign Name','Ad Group Name',
+                           'Campaign Name (Informational only)', 'Ad Group Name (Informational only)', 'Portfolio Name (Informational only)',
+                           'Start Date', 'End Date', 'Targeting Type', 'State',	'Campaign State (Informational only)', 'Ad Group State (Informational only)',
+                           'Daily Budget', 'SKU', 'ASIN (Informational only)', 'Eligibility Status (Informational only)', 'Reason for Ineligibility (Informational only)',
+                           'Ad Group Default Bid', 'Ad Group Default Bid (Informational only)', 'Bid', 'Keyword Text', 'Match Type', 'Bidding Strategy',
+                           'Placement','Percentage', 'Product Targeting Expression','Country', 'Station', 'Station_Campaign']
 
+        upload_file = upload_file.drop(columns_to_drop, axis=1)
         todaydir = time.strftime("%Y-%m-%d", time.localtime())
         uploadpath = r"D:\data\20230928后带ID文件\{}-rawuploaddata.xlsx".format(todaydir)
         upload_file.to_excel(excel_writer= uploadpath, index = None)
 
+        return upload_file
+
     except Exception as e:
         print("合并uploaddata 失败", e)
 
-if __name__ == '__main__':
-    raw_uploaddata(super_paht)
 
 def main():
 
-    path = r"D:\data\searchwords\手动.xlsx"
+    path = r"D:\data\20230928后带ID文件\testdata.xlsx"
     data_to_save = r"D:\data\searchwords\历史手动广告投放词.xlsx"
     data_to_current = r"D:\data\searchwords\本次手动广告投放词.xlsx"
 
@@ -76,7 +84,7 @@ def main():
     # 手动不同匹配类型的判断标准
     asin_acos = 0.18
     asin_cr = 0.06
-    asin_order = 3
+    asin_order = 2
 
     broad_acos = 0.22
     broad_cr = 0.05
@@ -84,11 +92,11 @@ def main():
 
     phrase_acos = 0.20
     phrase_cr = 0.07
-    phrase_order = 2
+    phrase_order = 3
 
     exact_acos = 0.18
     exact_cr = 0.09
-    exact_order = 3
+    exact_order = 4
 
     # 不符合标准的出单词（pending）将限制最高竞价
     base_bid_us = 0.4
@@ -107,13 +115,15 @@ def main():
     base_bid_sg = 0.2
     base_bid_sa = 0.2
 
+    # raw_bulkdata = raw_bulkdownload_data(super_path)
+    raw_bulkdata = pd.read_excel(r"D:\data\20230928后带ID文件\rawuploaddata.xlsx", sheet_name= 0, engine="openpyxl")
     keywords_data = read_excel(path, data_to_save, data_to_current,
                                asin_acos, asin_cr, asin_order,
                                broad_acos, broad_cr, broad_order,
                                phrase_acos, phrase_cr, phrase_order,
                                exact_acos, exact_cr, exact_order)
 
-    data_to_campaign(keywords_data,campaign_budget,group_default_bid,asin_up,broad_up,phrase_up,exact_up,
+    data_to_campaign(keywords_data,raw_bulkdata,campaign_budget,group_default_bid,asin_up,broad_up,phrase_up,exact_up,
                      base_bid_us,base_bid_ca,base_bid_uk,base_bid_de,base_bid_fr,base_bid_it,base_bid_es,
                      base_bid_au,base_bid_ae,base_bid_jp,base_bid_mx,base_bid_br,base_bid_nl,base_bid_sg,base_bid_sa)
 
@@ -167,32 +177,43 @@ def read_excel(path, data_to_save, data_to_current,
         keywords_info_concat = keywords_info_concat.drop_duplicates()
         keywords_info_to_save = keywords_info_concat[previous_keywords.shape[0]:]
         keywords_info_to_save['Date'] = time.strftime("%Y/%m/%d", time.localtime())
-        # 写入历史关键词记录文档
-        new_keywords_info_to_save = pd.concat([previous_keywords_total, keywords_info_to_save], axis=0, sort=False)
-        new_keywords_info_to_save.to_excel(excel_writer=data_to_save, index=None)
+
+        # # 写入历史关键词记录文档
+        # new_keywords_info_to_save = pd.concat([previous_keywords_total, keywords_info_to_save], axis=0, sort=False)
+        #
+        # new_keywords_info_to_save.to_excel(excel_writer=data_to_save, index=None)
 
         # Step3: 非重复关键词
         keywords_step3 = keywords_info_to_save[['Station','Campaign Name_M','Search Term Type', 'Customer Search Term']]
         keywords_step3 = pd.merge(keywords_step3, keywords_step2, how="left")
 
-        # 此次手动投放的数据源
-        keywords_step3.to_excel(excel_writer=data_to_current, index=None)
+        # # 此次手动投放的数据源
+        # keywords_step3.to_excel(excel_writer=data_to_current, index=None)
 
         return keywords_step3
 
     except Exception as e:
         print("读取失败", e)
 
-def data_to_campaign(keywords_data,campaign_budget_normal,group_default_bid_nornal,asin_up,broad_up,
+def data_to_campaign(keywords_data,raw_bulkdata,campaign_budget_normal,group_default_bid_nornal,asin_up,broad_up,
                      phrase_up,exact_up,base_bid_us,base_bid_ca,base_bid_uk,base_bid_de,base_bid_fr,
                      base_bid_it,base_bid_es,base_bid_au,base_bid_ae,base_bid_jp,base_bid_mx,base_bid_br,
                      base_bid_nl,base_bid_sg,base_bid_sa):
 
     global Campaign_M_info, station
 
-    try:
-        station_set = set(map(lambda x:x[-6:], keywords_data['Station']))
 
+    try:
+        # 2023.09.28 增加 含有ID的数据列，插入到keyword_data表中
+
+        keywords_data['Station_Campaign'] = keywords_data['Station'] + keywords_data['Campaign Name_M']
+        keywords_data['Station_Campaign_Group'] = keywords_data['Station_Campaign'] + keywords_data['Search Term Type']
+
+        # 这里暂时没有考虑 需要新增广告组的情况处理；
+        keywords_data = pd.merge(keywords_data, raw_bulkdata, on="Station_Campaign_Group" ,how="left")
+
+        station_set = set(map(lambda x:x[-6:], keywords_data['Station']))
+#------------------------------------
         for station in station_set:
             ## 获取站点内手动活动名称（去重)
             Campaign_Name_ = list(keywords_data.loc[keywords_data['Station'] == station]['Campaign Name_M'])
@@ -205,7 +226,7 @@ def data_to_campaign(keywords_data,campaign_budget_normal,group_default_bid_norn
             # 循环每个手动数据
             for i in Campaign_Name_M:
 
-                # 获取手动的sku
+                # 获取手动的sku 值 # 'Neabot-P1-Pro-FBA'
                 SellSKU = keywords_data.loc[(keywords_data['Station'] == station) & (keywords_data['Campaign Name_M'] == i)]['SellSKU'].iloc[0]
 
                 # Step1: 获取搜索词数据
@@ -285,7 +306,7 @@ def data_to_campaign(keywords_data,campaign_budget_normal,group_default_bid_norn
                 for g in [keywords_step1_ASIN_pending, keywords_step1_ASIN, keywords_step1_Broad_pending, keywords_step1_Broad,keywords_step1_Phrase, keywords_step1_Exact]:
                     g["Bid"] = g["Bid"].map(lambda x: group_default_bid if x < group_default_bid else x)
 
-                # 组信息
+                # 组信息 # ['Search Term Type', 'Bid', 'SKU']
                 keywords_step1_group = pd.DataFrame({"Search Term Type": ["Type", "Type"], "Bid": [group_default_bid, ""], "SKU": ["_", SellSKU]})
 
                 # Step2: 以活动+组名+组手动词的顺序拼接dataframe，然后添加其他列信息
@@ -312,6 +333,7 @@ def data_to_campaign(keywords_data,campaign_budget_normal,group_default_bid_norn
                 keywords_step2.loc[keywords_step2.Product_Targeting_ID != "_", "Match Type"] = "Targeting Expression"
                 for z in ["Broad", "Phrase", "Exact"]:
                     keywords_step2.loc[(keywords_step2.Search_Term_Type == z) & (keywords_step2.Customer_Search_Term != "_"), "Match Type"] = z
+
                 keywords_step2.loc[(keywords_step2.Search_Term_Type == "Broad_Pending") & (keywords_step2.Customer_Search_Term != "_"), "Match Type"] = "Broad"
 
                 # 增加Campaign Status列
@@ -398,5 +420,5 @@ def write_excel():
     except Exception as e:
         print("写入失败", e)
 #
-# if __name__ =='__main__':
-#     main()
+if __name__ =='__main__':
+    main()
